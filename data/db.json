@@ -1,0 +1,18 @@
+{
+  "admins": [
+    {
+      "username": "admin",
+      "password": "admin123",
+      "name": "Administrador Principal"
+    }
+  ],
+  "clients": [
+    {
+      "id": "25217942",
+      "name": "Maykol Hernandez",
+      "phone": "04242318617",
+      "address": "cua"
+    }
+  ],
+  "transactions": []
+}

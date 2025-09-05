@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LlenaderoSantaEduvigis - Sistema de Gestión de Botellones</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    .water-bg { background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 50%, #80deea 100%); }
+    .glass-effect { background: rgba(255, 255, 255, 0.25); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.18); }
+    .water-drop { position: relative; overflow: hidden; }
+    .water-drop::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 60%); transform: rotate(45deg); pointer-events: none; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body class="water-bg min-h-screen font-sans">
+  <!-- Login Screen -->
+  <div id="loginScreen" class="min-h-screen flex items-center justify-center p-4">
+    <div class="glass-effect rounded-2xl shadow-2xl p-8 w-full max-w-md water-drop">
+      <div class="text-center mb-8">
+        <img src="/img/logo.png" class="border-gray-300 w-full mx-auto rounded-2xl shadow-lg" alt="Logo de la empresa" />
+        <h1 class="text-3xl font-bold text-blue-800"></h1>
+        <p class="text-blue-600 mt-2">Sistema de Gestión de Botellones</p>
+      </div>
+
+      <form id="loginForm" class="space-y-6">
+        <div>
+          <label class="block text-gray-700 mb-2">Tipo de Usuario</label>
+          <select id="userType" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required>
+            <option value="">Seleccione tipo de usuario</option>
+            <option value="admin">Administrador</option>
+            <option value="client">Cliente</option>
+          </select>
+        </div>
+
+        <div id="adminFields" class="hidden">
+          <div>
+            <label class="block text-gray-700 mb-2">Usuario</label>
+            <input type="text" id="username" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Ingrese su usuario" />
+          </div>
+          <div>
+            <label class="block text-gray-700 mb-2">Contraseña</label>
+            <input type="password" id="password" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Ingrese su contraseña" />
+          </div>
+        </div>
+
+        <div id="clientFields" class="hidden">
+          <div>
+            <label class="block text-gray-700 mb-2">Cédula de Identidad</label>
+            <input type="text" id="clientId" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Ingrese su cédula" />
+          </div>
+        </div>
+
+        <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-md">
+          <i class="fas fa-sign-in-alt mr-2"></i>
+          Iniciar Sesión
+        </button>
+      </form>
+
+      <div id="loginMessage" class="mt-4 p-3 rounded-lg hidden"></div>
+    </div>
+  </div>
+
+  <!-- User Dashboard -->
+  <div id="userDashboard" class="hidden min-h-screen p-4">
+    <div class="max-w-6xl mx-auto">
+      <header class="glass-effect rounded-2xl p-6 mb-6 flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
+        <div class="flex items-center w-full sm:flex-1">
+          <div class="relative w-auto mr-4 flex-shrink-0">
+            <img id="clientHeaderImage" src="https://via.placeholder.com/200x200.png?text=U" alt="Avatar" class="rounded-full w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 object-cover border border-blue-200" />
+            <button type="button" title="Cambiar imagen" onclick="triggerClientImageSelect()" class="absolute -bottom-1 -right-1 bg-white text-blue-700 border border-blue-300 rounded-full p-1 shadow hover:bg-blue-50">
+              <i class="fa fa-camera text-xs"></i>
+            </button>
+          </div>
+          <div class="flex-1 min-w-0 text-left">
+            <h1 id="clientNameHeading" class="text-2xl font-bold text-blue-800">Cliente</h1>
+            <p class="text-blue-600">Bienvenido a su área personal</p>
+            <p class="text-sm text-gray-600" id="clientInfo"></p>
+          </div>
+        </div>
+        <button onclick="logout()" class="bg-red-500 hover:bg-red-600 text-white rounded-lg px-3 py-1.5 text-sm sm:px-4 sm:py-2 sm:text-base">
+          <i class="fas fa-sign-out-alt mr-2"></i>Cerrar Sesión
+        </button>
+        <input id="clientImageInput" type="file" accept="image/*" class="hidden" onchange="handleClientImageChange(event)" />
+      </header>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="glass-effect rounded-2xl p-6 text-center water-drop">
+          <div class="text-4xl font-bold text-blue-600 mb-2" id="totalBottles">0</div>
+          <p class="text-gray-700">Botellones Comprados</p>
+        </div>
+        <div class="glass-effect rounded-2xl p-6 text-center water-drop">
+          <div class="text-4xl font-bold text-green-600 mb-2" id="dollarPayments">0</div>
+          <p class="text-gray-700">Pagos en Dólares</p>
+        </div>
+        <div class="glass-effect rounded-2xl p-6 text-center water-drop">
+          <div class="text-4xl font-bold text-red-600 mb-2" id="amountOwed">$0</div>
+          <p class="text-gray-700">Total Adeudado</p>
+        </div>
+        <div class="glass-effect rounded-2xl p-6 text-center water-drop">
+          <div class="text-4xl font-bold text-orange-600 mb-2" id="bottlesOwed">0</div>
+          <p class="text-gray-700">Botellones Pendientes</p>
+        </div>
+      </div>
+
+      <div class="glass-effect rounded-2xl p-6 water-drop">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-semibold text-blue-800">Transacciones Recientes</h2>
+          <button onclick="refreshTransactions()" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg text-sm">
+            <i class="fas fa-sync-alt mr-1"></i>Actualizar
+          </button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr class="border-b-2 border-blue-200">
+                <th class="text-left py-3 px-4">Fecha</th>
+                <th class="text-left py-3 px-4">Botellones Comprados</th>
+                <th class="text-left py-3 px-4">Botellones Entregados</th>
+                <th class="text-left py-3 px-4">Botellones por Entregar</th>
+                <th class="text-left py-3 px-4">Moneda</th>
+                <th class="text-left py-3 px-4">Monto</th>
+                <th class="text-left py-3 px-4">Estado</th>
+              </tr>
+            </thead>
+            <tbody id="transactionsTable">
+              <tr>
+                <td colspan="7" class="text-center py-8 text-gray-500">No hay transacciones registradas</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Dashboard -->
+  <div id="adminDashboard" class="hidden min-h-screen p-4">
+    <div class="max-w-7xl mx-auto">
+      <header class="glass-effect rounded-2xl p-6 mb-6 flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
+        <div class="flex items-center">
+          <div class="relative w-auto mr-4 flex-shrink-0">
+            <img id="adminHeaderImage" src="https://via.placeholder.com/200x200.png?text=A" alt="Admin" class="rounded-full w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 object-cover border border-green-200" />
+            <button type="button" title="Cambiar imagen" onclick="triggerAdminImageSelect()" class="absolute max-w-md -bottom-1 -right-1 bg-white text-green-700 border border-green-300 rounded-full p-1 shadow hover:bg-green-50">
+              <i class="fa fa-camera text-xs"></i>
+            </button>
+          </div>
+          <div class="flex-1 min-w-0 text-left">
+            <h1 class="text-2xl font-bold text-green-800">Panel de Administración</h1>
+            <p class="text-green-600">Gestión completa del sistema</p>
+          </div>
+        </div>
+        <button onclick="logout()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg w-full sm:w-auto">
+          <i class="fas fa-sign-out-alt mr-2"></i>Cerrar Sesión
+        </button>
+        <input id="adminImageInput" type="file" accept="image/*" class="hidden" onchange="handleAdminImageChange(event)" />
+      </header>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <button onclick="showModal('newTransaction')" class="glass-effect rounded-2xl p-6 text-center water-drop hover:scale-105 transition-transform duration-300 cursor-pointer">
+          <div class="text-blue-500 mb-3"><i class="fas fa-plus-circle text-3xl"></i></div>
+          <h3 class="font-semibold text-gray-800">Nueva Transacción</h3>
+        </button>
+
+        <button onclick="showModal('manageUsers')" class="glass-effect rounded-2xl p-6 text-center water-drop hover:scale-105 transition-transform duration-300 cursor-pointer">
+          <div class="text-green-500 mb-3"><i class="fas fa-users text-3xl"></i></div>
+          <h3 class="font-semibold text-gray-800">Gestionar Clientes</h3>
+        </button>
+
+        <button onclick="showReports()" class="glass-effect rounded-2xl p-6 text-center water-drop hover:scale-105 transition-transform duration-300 cursor-pointer">
+          <div class="text-purple-500 mb-3"><i class="fas fa-chart-bar text-3xl"></i></div>
+          <h3 class="font-semibold text-gray-800">Reportes</h3>
+        </button>
+
+        <button onclick="showModal('inventory')" class="glass-effect rounded-2xl p-6 text-center water-drop hover:scale-105 transition-transform duration-300 cursor-pointer">
+          <div class="text-orange-500 mb-3"><i class="fas fa-warehouse text-3xl"></i></div>
+          <h3 class="font-semibold text-gray-800">Inventario</h3>
+        </button>
+      </div>
+
+      <div class="glass-effect rounded-2xl p-6 water-drop mb-8">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-semibold text-gray-800">Transacciones Recientes</h2>
+          <button onclick="refreshTransactions()" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg text-sm">
+            <i class="fas fa-sync-alt mr-1"></i>Actualizar
+          </button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr class="border-b-2 border-green-200">
+                <th class="text-left py-3 px-4">Cliente</th>
+                <th class="text-left py-3 px-4">Fecha</th>
+                <th class="text-left py-3 px-4">Botellones Comprados</th>
+                <th class="text-left py-3 px-4">Botellones Entregados</th>
+                <th class="text-left py-3 px-4">Botellones por Entregar</th>
+                <th class="text-left py-3 px-4">Moneda</th>
+                <th class="text-left py-3 px-4">Monto</th>
+                <th class="text-left py-3 px-4">Estado</th>
+                <th class="text-left py-3 px-4">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="adminTransactionsTable">
+              <tr>
+                <td colspan="9" class="text-center py-8 text-gray-500">No hay transacciones registradas</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div class="glass-effect rounded-2xl p-6 w-full max-w-md water-drop">
+      <h3 id="modalTitle" class="text-xl font-semibold mb-4"></h3>
+      <div id="modalContent"></div>
+      <div class="flex justify-end space-x-3 mt-4">
+        <button onclick="closeModal()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg">Cancelar</button>
+        <button id="modalAction" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = '';
+
+    // Helper fetch wrappers
+    async function apiGet(path) {
+      const res = await fetch(API_BASE + path);
+      if (!res.ok) throw new Error((await res.json()).error || res.statusText);
+      return res.json();
+    }
+    async function apiSend(path, method, body) {
+      const res = await fetch(API_BASE + path, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: body ? JSON.stringify(body) : undefined
+      });
+      if (!res.ok) throw new Error((await res.json()).error || res.statusText);
+      return res.json();
+    }
+
+    // Session state
+    let currentUser = null;
+    let currentUserType = null;
+
+    // UI: login type switch
+    document.getElementById('userType').addEventListener('change', function () {
+      const type = this.value;
+      document.getElementById('adminFields').classList.add('hidden');
+      document.getElementById('clientFields').classList.add('hidden');
+      if (type === 'admin') document.getElementById('adminFields').classList.remove('hidden');
+      if (type === 'client') document.getElementById('clientFields').classList.remove('hidden');
+    });
+
+    document.getElementById('loginForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const type = document.getElementById('userType').value;
+      try {
+        if (type === 'admin') {
+          const username = document.getElementById('username').value.trim();
+          const password = document.getElementById('password').value.trim();
+          const { user } = await apiSend('/api/auth/admin', 'POST', { username, password });
+          currentUser = user; currentUserType = 'admin'; showAdminDashboard();
+        } else if (type === 'client') {
+          const id = document.getElementById('clientId').value.trim();
+          const { user } = await apiSend('/api/auth/client', 'POST', { id });
+          currentUser = user; currentUserType = 'client'; showUserDashboard();
+        } else {
+          showLoginMessage('Seleccione un tipo de usuario', 'error');
+        }
+      } catch (err) {
+        showLoginMessage(err.message || 'Error de autenticación', 'error');
+      }
+    });
+
+    function showLoginMessage(message, type) {
+      const messageDiv = document.getElementById('loginMessage');
+      messageDiv.textContent = message;
+      messageDiv.className = `mt-4 p-3 rounded-lg ${type === 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`;
+      messageDiv.classList.remove('hidden');
+      setTimeout(() => messageDiv.classList.add('hidden'), 3000);
+    }
+
+    function showUserDashboard() {
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('adminDashboard').classList.add('hidden');
+      document.getElementById('userDashboard').classList.remove('hidden');
+      // Load header image if exists
+      if (currentUser && currentUser.id) {
+        const saved = localStorage.getItem(`clientHeaderImage_${currentUser.id}`);
+        if (saved) {
+          const img = document.getElementById('clientHeaderImage'); if (img) img.src = saved;
+        }
+      }
+      const nameEl = document.getElementById('clientNameHeading'); if (nameEl) nameEl.textContent = currentUser.name;
+      document.getElementById('clientInfo').textContent = `C.I.: ${currentUser.id}`;
+      loadUserData();
+    }
+
+    function showAdminDashboard() {
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('userDashboard').classList.add('hidden');
+      document.getElementById('adminDashboard').classList.remove('hidden');
+      const savedImage = localStorage.getItem('adminHeaderImage');
+      if (savedImage) { const img = document.getElementById('adminHeaderImage'); if (img) img.src = savedImage; }
+      loadAdminData();
+    }
+
+    function logout() {
+      currentUser = null; currentUserType = null;
+      document.getElementById('loginScreen').classList.remove('hidden');
+      document.getElementById('userDashboard').classList.add('hidden');
+      document.getElementById('adminDashboard').classList.add('hidden');
+      document.getElementById('loginForm').reset();
+    }
+
+    // Clients cache and API
+    let clientsCache = null;
+    async function getClients() {
+      if (!clientsCache) clientsCache = await apiGet('/api/clients');
+      return clientsCache;
+    }
+    function invalidateClients() { clientsCache = null; }
+
+    // User data
+    async function loadUserData() {
+      try {
+        const list = await apiGet(`/api/transactions?clientId=${encodeURIComponent(currentUser.id)}`);
+        // Stats
+        const totalBottles = list.reduce((s, t) => s + (t.bottles || 0), 0);
+        const dollarPayments = list.filter(t => t.currency === 'USD').length;
+        const amountOwed = list.filter(t => !t.paid).reduce((s, t) => s + (t.amount || 0), 0);
+        const bottlesOwed = list.reduce((s, t) => s + Math.max(0, (t.bottles || 0) - (t.delivered || 0)), 0);
+        document.getElementById('totalBottles').textContent = totalBottles;
+        document.getElementById('dollarPayments').textContent = dollarPayments;
+        document.getElementById('amountOwed').textContent = `$${amountOwed}`;
+        document.getElementById('bottlesOwed').textContent = bottlesOwed;
+        // Table
+        const tbody = document.getElementById('transactionsTable');
+        tbody.innerHTML = '';
+        if (list.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-500">No hay transacciones registradas</td></tr>';
+        } else {
+          list.forEach(t => {
+            const tr = document.createElement('tr'); tr.className = 'border-b border-gray-200';
+            tr.innerHTML = `
+              <td class="py-3 px-4">${new Date(t.date).toLocaleDateString()}</td>
+              <td class="py-3 px-4">${t.bottles}</td>
+              <td class="py-3 px-4">${t.delivered || 0}</td>
+              <td class="py-3 px-4">${Math.max(0, (t.bottles || 0) - (t.delivered || 0))}</td>
+              <td class="py-3 px-4">${t.currency}</td>
+              <td class="py-3 px-4">${t.amount}</td>
+              <td class="py-3 px-4"><span class="px-2 py-1 rounded-full text-xs ${t.paid ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">${t.paid ? 'Pagado' : 'Pendiente'}</span></td>
+            `;
+            tbody.appendChild(tr);
+          });
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function loadAdminData() {
+      try {
+        const list = await apiGet('/api/transactions');
+        const tbody = document.getElementById('adminTransactionsTable');
+        tbody.innerHTML = '';
+        if (list.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="9" class="text-center py-8 text-gray-500">No hay transacciones registradas</td></tr>';
+        } else {
+          list.forEach(transaction => {
+            const locked = transaction.locked || (transaction.delivered || 0) >= (transaction.bottles || 0);
+            const tr = document.createElement('tr'); tr.className = 'border-b border-gray-200';
+            tr.innerHTML = `
+              <td class="py-3 px-4">
+                <button type="button" class="w-full text-left sm:cursor-default underline sm:no-underline text-blue-700 hover:text-blue-900" onclick="openTransactionDetail('${transaction.id}')">${transaction.clientName || 'Cliente'}</button>
+              </td>
+              <td class="py-3 px-4">${new Date(transaction.date).toLocaleDateString()}</td>
+              <td class="py-3 px-4">${transaction.bottles}</td>
+              <td class="py-3 px-4">${transaction.delivered || 0}</td>
+              <td class="py-3 px-4">${Math.max(0, (transaction.bottles || 0) - (transaction.delivered || 0))}</td>
+              <td class="py-3 px-4">${transaction.currency}</td>
+              <td class="py-3 px-4">${transaction.amount}</td>
+              <td class="py-3 px-4"><span class="px-2 py-1 rounded-full text-xs ${transaction.paid ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">${transaction.paid ? 'Pagado' : 'Pendiente'}</span></td>
+              <td class="py-3 px-4 whitespace-nowrap">
+                <div class="hidden sm:flex items-center gap-3">
+                  ${locked ? `<span class='text-gray-400' title='Transacción cerrada'><i class='fas fa-lock'></i></span>` : `<button onclick="editTransaction('${transaction.id}')" class="text-blue-600 hover:text-blue-800" title="Editar"><i class="fas fa-edit"></i></button><button onclick="deleteTransaction('${transaction.id}')" class="text-red-600 hover:text-red-800" title="Eliminar"><i class="fas fa-trash"></i></button>`}
+                </div>
+                <div class="flex sm:hidden items-center gap-4">
+                  ${locked ? `<span class='text-gray-400 text-xl' title='Transacción cerrada'><i class='fas fa-lock'></i></span>` : `<button onclick="editTransaction('${transaction.id}')" class="text-blue-600 hover:text-blue-800 text-xl px-2 py-1 rounded" title="Editar"><i class="fas fa-edit"></i></button><button onclick="deleteTransaction('${transaction.id}')" class="text-red-600 hover:text-red-800 text-xl px-2 py-1 rounded" title="Eliminar"><i class="fas fa-trash"></i></button>`}
+                </div>
+              </td>
+            `;
+            tbody.appendChild(tr);
+          });
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function refreshTransactions() {
+      if (currentUserType === 'admin') loadAdminData();
+      else if (currentUserType === 'client') loadUserData();
+    }
+
+    // Modal
+    function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+
+    async function showModal(type) {
+      const modal = document.getElementById('modal');
+      const modalTitle = document.getElementById('modalTitle');
+      const modalContent = document.getElementById('modalContent');
+      const modalAction = document.getElementById('modalAction');
+      modal.classList.remove('hidden');
+      switch (type) {
+        case 'newTransaction': {
+          modalTitle.textContent = 'Nueva Transacción';
+          modalContent.innerHTML = `
+            <div class="space-y-4">
+              <div>
+                <label class="block text-gray-700 mb-2">Cliente</label>
+                <input type="text" id="transactionClientSearch" class="w-full p-3 border border-gray-300 rounded-lg" placeholder="Escriba nombre o cédula" />
+                <input type="hidden" id="transactionClient" />
+                <div id="transactionClientResults" class="mt-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg bg-white/80 divide-y hidden"></div>
+                <p id="transactionClientSelected" class="mt-2 text-sm text-green-700 hidden"></p>
+              </div>
+              <div>
+                <label class="block text-gray-700 mb-2">Cantidad de Botellones</label>
+                <input type="number" id="transactionBottles" class="w-full p-3 border border-gray-300 rounded-lg" min="1" />
+              </div>
+              <div>
+                <label class="block text-gray-700 mb-2">Botellones Entregados</label>
+                <input type="number" id="transactionDelivered" class="w-full p-3 border border-gray-300 rounded-lg" min="0" />
+              </div>
+              <div>
+                <label class="block text-gray-700 mb-2">Moneda</label>
+                <select id="transactionCurrency" class="w-full p-3 border border-gray-300 rounded-lg">
+                  <option value="USD">Dólares (USD)</option>
+                  <option value="VES">Bolívares (VES)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-gray-700 mb-2">Monto</label>
+                <input type="number" id="transactionAmount" class="w-full p-3 border border-gray-300 rounded-lg" step="0.01" min="0" />
+              </div>
+              <div>
+                <label class="flex items-center"><input type="checkbox" id="transactionPaid" class="mr-2" /><span class="text-gray-700">¿Pagado?</span></label>
+              </div>
+            </div>
+          `;
+          modalAction.textContent = 'Crear Transacción';
+          modalAction.onclick = createTransaction;
+          initTransactionClientSearch();
+          break;
+        }
+        case 'manageUsers': {
+          modalTitle.textContent = 'Gestionar Clientes';
+          modalContent.innerHTML = `
+            <div class="space-y-4 max-h-[65vh] overflow-y-auto pr-1">
+              <input type="hidden" id="clientEditingId" value="" />
+              <div class="grid grid-cols-1 gap-3">
+                <div><label class="block text-gray-700 mb-1">Cédula de identidad</label><input type="text" id="clientFormId" class="w-full p-3 border border-gray-300 rounded-lg" placeholder="Ej: 12345678" /></div>
+                <div><label class="block text-gray-700 mb-1">Nombre y apellido</label><input type="text" id="clientFormName" class="w-full p-3 border border-gray-300 rounded-lg" placeholder="Ej: Juan Pérez" /></div>
+                <div><label class="block text-gray-700 mb-1">Teléfono</label><input type="tel" id="clientFormPhone" class="w-full p-3 border border-gray-300 rounded-lg" placeholder="Ej: 0412-1234567" /></div>
+                <div><label class="block text-gray-700 mb-1">Dirección</label><textarea id="clientFormAddress" class="w-full p-3 border border-gray-300 rounded-lg" rows="2" placeholder="Dirección del cliente"></textarea></div>
+              </div>
+              <div>
+                <h4 class="font-semibold text-gray-700 mb-2">Clientes</h4>
+                <div id="clientsList" class="max-h-64 overflow-y-auto border border-gray-200 rounded-lg divide-y bg-white/50"></div>
+              </div>
+            </div>
+          `;
+          modalAction.textContent = 'Guardar Cliente';
+          modalAction.onclick = saveClient;
+          renderClientsList();
+          break;
+        }
+      }
+    }
+
+    // Clients UI functions (using backend)
+    async function renderClientsList() {
+      const listEl = document.getElementById('clientsList'); if (!listEl) return;
+      const clients = await getClients();
+      if (!clients || clients.length === 0) {
+        listEl.innerHTML = '<div class="p-4 text-gray-500 text-sm">No hay clientes</div>';
+        return;
+      }
+      listEl.innerHTML = clients.map(c => `
+        <div class="flex items-start justify-between p-3">
+          <div class="text-sm">
+            <div class="font-medium text-gray-800">${c.name || '-'}</div>
+            <div class="text-gray-600">CI: ${c.id || '-'}</div>
+            <div class="text-gray-500">Tel: ${c.phone || '-'}</div>
+            ${c.address ? `<div class="text-gray-500">Dir: ${c.address}</div>` : ''}
+          </div>
+          <div class="flex items-center gap-2 ml-3">
+            <button class="text-blue-600 hover:text-blue-800" onclick="editClient('${c.id}')"><i class="fas fa-edit"></i></button>
+            <button class="text-red-600 hover:text-red-800" onclick="deleteClient('${c.id}')"><i class="fas fa-trash"></i></button>
+          </div>
+        </div>
+      `).join('');
+    }
+    async function saveClient() {
+      const id = document.getElementById('clientFormId').value.trim();
+      const name = document.getElementById('clientFormName').value.trim();
+      const phone = document.getElementById('clientFormPhone').value.trim();
+      const address = document.getElementById('clientFormAddress').value.trim();
+      if (!id || !name) { alert('Cédula y nombre son obligatorios'); return; }
+      try {
+        await apiSend('/api/clients', 'POST', { id, name, phone, address });
+        invalidateClients();
+        renderClientsList();
+        loadAdminData();
+        document.getElementById('clientFormId').value = '';
+        document.getElementById('clientFormName').value = '';
+        document.getElementById('clientFormPhone').value = '';
+        document.getElementById('clientFormAddress').value = '';
+        document.getElementById('clientEditingId').value = '';
+      } catch (e) { alert(e.message); }
+    }
+    async function editClient(clientId) {
+      const clients = await getClients();
+      const client = clients.find(c => c.id === clientId); if (!client) return;
+      document.getElementById('clientFormId').value = client.id || '';
+      document.getElementById('clientFormName').value = client.name || '';
+      document.getElementById('clientFormPhone').value = client.phone || '';
+      document.getElementById('clientFormAddress').value = client.address || '';
+      document.getElementById('clientEditingId').value = client.id;
+    }
+    async function deleteClient(clientId) {
+      if (!confirm('¿Eliminar este cliente?')) return;
+      try {
+        await apiSend(`/api/clients/${encodeURIComponent(clientId)}`, 'DELETE');
+        invalidateClients();
+        renderClientsList();
+        loadAdminData();
+      } catch (e) { alert(e.message); }
+    }
+
+    // Transactions
+    function initTransactionClientSearch() {
+      const input = document.getElementById('transactionClientSearch');
+      const results = document.getElementById('transactionClientResults');
+      const hidden = document.getElementById('transactionClient');
+      const selected = document.getElementById('transactionClientSelected');
+      if (!input || !results) return;
+      let all = [];
+      getClients().then(list => all = list).catch(() => all = []);
+
+      function chooseClient(client) {
+        hidden.value = client.id;
+        selected.textContent = `Seleccionado: ${client.name} (${client.id})`;
+        selected.classList.remove('hidden');
+        input.value = `${client.name} (${client.id})`;
+        results.innerHTML = '';
+        results.classList.add('hidden');
+      }
+      function render(list) {
+        results.classList.remove('hidden');
+        if (!list || list.length === 0) { results.innerHTML = '<div class="p-2 text-sm text-gray-500">Sin coincidencias</div>'; return; }
+        results.innerHTML = list.map(c => `
+          <button type="button" class="w-full text-left p-2 hover:bg-green-50 focus:bg-green-50" data-id="${c.id}">
+            <div class="font-medium text-gray-800">${c.name || '-'}</div>
+            <div class="text-xs text-gray-500">CI: ${c.id || '-'} · Tel: ${c.phone || '-'}</div>
+          </button>
+        `).join('');
+        Array.from(results.querySelectorAll('button[data-id]')).forEach(btn => {
+          btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-id');
+            const client = all.find(x => x.id === id); if (client) chooseClient(client);
+          });
+        });
+      }
+      function filter(q) {
+        const query = (q || '').trim().toLowerCase();
+        if (!query) { results.innerHTML = ''; results.classList.add('hidden'); hidden.value = ''; if (selected) selected.classList.add('hidden'); return; }
+        const filtered = all.filter(c => (c.name && c.name.toLowerCase().includes(query)) || (c.id && c.id.toLowerCase().includes(query)) || (c.phone && c.phone.toLowerCase().includes(query))).slice(0, 50);
+        render(filtered);
+      }
+      input.addEventListener('input', e => filter(e.target.value));
+    }
+
+    async function createTransaction() {
+      const clientId = document.getElementById('transactionClient').value;
+      const bottles = parseInt(document.getElementById('transactionBottles').value);
+      const delivered = parseInt(document.getElementById('transactionDelivered').value || '0') || 0;
+      const currency = document.getElementById('transactionCurrency').value;
+      const amount = parseFloat(document.getElementById('transactionAmount').value || '0') || 0;
+      const paid = document.getElementById('transactionPaid').checked;
+      if (!clientId || !bottles || !currency) { alert('Por favor complete todos los campos'); return; }
+      if (delivered < 0 || delivered > bottles) { alert('La cantidad entregada no puede ser mayor que la comprada ni negativa'); return; }
+      try {
+        await apiSend('/api/transactions', 'POST', { clientId, bottles, delivered, currency, amount, paid });
+        closeModal();
+        loadAdminData();
+      } catch (e) { alert(e.message); }
+    }
+
+    // Transaction detail for mobile
+    async function openTransactionDetail(id) {
+      try {
+        const list = await apiGet('/api/transactions');
+        const t = list.find(x => x.id === id); if (!t) return;
+        const pending = Math.max(0, (t.bottles || 0) - (t.delivered || 0));
+        const locked = t.locked || (t.delivered || 0) >= (t.bottles || 0);
+        const modal = document.getElementById('modal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalContent = document.getElementById('modalContent');
+        const modalAction = document.getElementById('modalAction');
+        modalTitle.textContent = `Transacción de ${t.clientName || t.clientId}`;
+        modalContent.innerHTML = `
+          <div class="space-y-3">
+            <div class="grid grid-cols-2 gap-2 text-sm">
+              <div class="text-gray-500">Cliente</div><div class="font-medium">${t.clientName || ''} (CI: ${t.clientId})</div>
+              <div class="text-gray-500">Fecha</div><div class="font-medium">${new Date(t.date).toLocaleString()}</div>
+              <div class="text-gray-500">Comprados</div><div class="font-medium">${t.bottles}</div>
+              <div class="text-gray-500">Entregados</div><div class="font-medium">${t.delivered || 0}</div>
+              <div class="text-gray-500">Por entregar</div><div class="font-medium">${pending}</div>
+              <div class="text-gray-500">Moneda</div><div class="font-medium">${t.currency}</div>
+              <div class="text-gray-500">Monto</div><div class="font-medium">${t.amount}</div>
+              <div class="text-gray-500">Estado</div><div class="font-medium">${t.paid ? 'Pagado' : 'Pendiente'}</div>
+            </div>
+            ${locked ? `<div class='flex items-center text-amber-700 bg-amber-50 border border-amber-200 rounded p-2 text-sm'><i class='fas fa-lock mr-2'></i>Transacción cerrada (entrega completa)</div>` : ''}
+            ${locked ? '' : `<div class='flex justify-between mt-2'>
+              <button type='button' class='px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg' id='detailDeleteBtn'>Eliminar</button>
+              <button type='button' class='px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg' id='detailEditBtn'>Editar</button>
+            </div>`}
+          </div>
+        `;
+        if (locked) { modalAction.textContent = 'Cerrar'; modalAction.onclick = closeModal; }
+        else { modalAction.textContent = 'Editar'; modalAction.onclick = function () { closeModal(); editTransaction(id); }; }
+        modal.classList.remove('hidden');
+        const delBtn = document.getElementById('detailDeleteBtn');
+        const edtBtn = document.getElementById('detailEditBtn');
+        if (delBtn) delBtn.onclick = function () { if (confirm('¿Eliminar esta transacción?')) { deleteTransaction(id); closeModal(); } };
+        if (edtBtn) edtBtn.onclick = function () { closeModal(); editTransaction(id); };
+      } catch (e) { console.error(e); }
+    }
+
+    async function editTransaction(id) {
+      try {
+        const list = await apiGet('/api/transactions');
+        const t = list.find(x => x.id === id); if (!t) return;
+        const locked = t.locked || (t.delivered || 0) >= (t.bottles || 0);
+        if (locked) { alert('Esta transacción está cerrada y no puede editarse.'); return; }
+        const modal = document.getElementById('modal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalContent = document.getElementById('modalContent');
+        const modalAction = document.getElementById('modalAction');
+        modalTitle.textContent = 'Editar Transacción';
+        modalContent.innerHTML = `
+          <div class="space-y-4">
+            <div class="grid grid-cols-1 gap-3">
+              <div>
+                <label class="block text-gray-700 mb-1">Botellones comprados</label>
+                <input type="number" value="${t.bottles}" class="w-full p-3 border border-gray-300 rounded-lg bg-gray-100" disabled />
+              </div>
+              <div>
+                <label class="block text-gray-700 mb-1">Botellones entregados</label>
+                <div class="flex gap-2">
+                  <input type="number" id="editDelivered" value="${t.delivered || 0}" min="0" max="${t.bottles}" class="w-full p-3 border border-gray-300 rounded-lg" />
+                  <button type="button" id="btnDeliverAll" class="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg">Entregar todo</button>
+                </div>
+              </div>
+              <div>
+                <label class="block text-gray-700 mb-1">Moneda</label>
+                <select id="editCurrency" class="w-full p-3 border border-gray-300 rounded-lg">
+                  <option value="USD" ${t.currency === 'USD' ? 'selected' : ''}>Dólares (USD)</option>
+                  <option value="VES" ${t.currency === 'VES' ? 'selected' : ''}>Bolívares (VES)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-gray-700 mb-1">Monto</label>
+                <input type="number" id="editAmount" value="${t.amount}" step="0.01" min="0" class="w-full p-3 border border-gray-300 rounded-lg" />
+              </div>
+              <div class="flex items-center">
+                <input type="checkbox" id="editPaid" class="mr-2" ${t.paid ? 'checked' : ''} />
+                <span class="text-gray-700">Pagado</span>
+              </div>
+            </div>
+          </div>
+        `;
+        modalAction.textContent = 'Guardar cambios';
+        modalAction.onclick = function () { saveEditedTransaction(id); };
+        modal.classList.remove('hidden');
+        const btnAll = document.getElementById('btnDeliverAll');
+        if (btnAll) btnAll.onclick = function () { const inp = document.getElementById('editDelivered'); if (inp) inp.value = t.bottles; };
+      } catch (e) { console.error(e); }
+    }
+
+    async function saveEditedTransaction(id) {
+      try {
+        const delivered = parseInt(document.getElementById('editDelivered').value || '0') || 0;
+        const currency = document.getElementById('editCurrency').value;
+        const amount = parseFloat(document.getElementById('editAmount').value || '0') || 0;
+        const paid = document.getElementById('editPaid').checked;
+        if (delivered < 0) { alert('Valor inválido'); return; }
+        await apiSend(`/api/transactions/${encodeURIComponent(id)}`, 'PUT', { delivered, currency, amount, paid });
+        closeModal();
+        loadAdminData();
+      } catch (e) { alert(e.message); }
+    }
+
+    async function deleteTransaction(id) {
+      try {
+        await apiSend(`/api/transactions/${encodeURIComponent(id)}`, 'DELETE');
+        loadAdminData();
+      } catch (e) { alert(e.message); }
+    }
+
+    // Header image changes (admin/client) remain local to the browser
+    function triggerAdminImageSelect() { const input = document.getElementById('adminImageInput'); if (input) input.click(); }
+    function handleAdminImageChange(event) {
+      const file = event.target.files && event.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function () { const dataUrl = reader.result; localStorage.setItem('adminHeaderImage', dataUrl); const img = document.getElementById('adminHeaderImage'); if (img) img.src = dataUrl; };
+      reader.readAsDataURL(file);
+    }
+    function triggerClientImageSelect() { const input = document.getElementById('clientImageInput'); if (input) input.click(); }
+    function handleClientImageChange(event) {
+      const file = event.target.files && event.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function () { const dataUrl = reader.result; if (currentUser && currentUser.id) localStorage.setItem(`clientHeaderImage_${currentUser.id}`, dataUrl); const img = document.getElementById('clientHeaderImage'); if (img) img.src = dataUrl; };
+      reader.readAsDataURL(file);
+    }
+
+    // Stubs for not-implemented features
+    function showReports() { alert('Reportes: funcionalidad por implementar.'); }
+
+  </script>
+</body>
+</html>
